@@ -5,10 +5,17 @@ import { FundingWebhookRecord } from '../ingestion/dto/funding-webhook.dto';
 import { PayoutEventRecord } from '../ingestion/dto/payout-event.dto';
 import { ReferenceRateRecord } from '../ingestion/dto/reference-rate.dto';
 import { UsdtDepositRecord } from '../ingestion/dto/usdt-deposit.dto';
-import { ACCOUNTS, Account } from '../ledger/accounts';
+import { formatMinorUnits } from '../ingestion/money';
+import {
+  ACCOUNTS,
+  Account,
+  CURRENCY_DECIMALS,
+  Currency,
+} from '../ledger/accounts';
 import { LedgerService } from '../ledger/ledger.service';
-import { Break } from './breaks';
+import { Break, Severity } from './breaks';
 import { runChecks } from './checks';
+import { boliviaTimestamp } from './format';
 import { PAYOUT_STATUSES, PayoutStatus, derivePayouts } from './payouts';
 import {
   IngestConflict,
@@ -30,6 +37,20 @@ export type PayoutSummary = Record<
   PayoutStatus,
   { count: number; amountBsCents: number }
 >;
+
+export interface Amount {
+  amount: string; // decimal with 2 places, e.g. "3900.00"
+  currency: Currency;
+}
+
+export interface ReconciliationReport {
+  asOf: string; // Bolivia time, e.g. "2026-10-05T20:00:00-04:00"
+  asOfUtc: string;
+  balances: Record<keyof ReportBalances, Amount>;
+  payouts: Record<PayoutStatus, { count: number; amount: Amount }>;
+  breakCount: Record<Severity, number>;
+  breaks: Break[];
+}
 
 const SELECT_DEPOSITS_SQL = `
   SELECT tx_hash, amount_usdt_micro, ts_utc
@@ -132,4 +153,45 @@ export class ReportService {
     }
     return summary;
   }
+
+  // The full report, ready to print or save as JSON. Amounts are decimal
+  // strings (never floats). It contains no generation time, so the same data
+  // always produces the same file.
+  buildReport(asOf: string): ReconciliationReport {
+    const balances = this.getBalances(asOf);
+    const payouts = this.getPayoutSummary(asOf);
+    const breaks = this.getBreaks(asOf);
+
+    return {
+      asOf: boliviaTimestamp(asOf),
+      asOfUtc: asOf,
+      balances: {
+        usdtNotConverted: amount(balances.usdtNotConverted, 'USDT'),
+        bsAvailableAtProvider: amount(balances.bsAvailableAtProvider, 'BS'),
+        bsPaidOut: amount(balances.bsPaidOut, 'BS'),
+        bsInPendingPayouts: amount(balances.bsInPendingPayouts, 'BS'),
+      },
+      payouts: Object.fromEntries(
+        PAYOUT_STATUSES.map((status) => [
+          status,
+          {
+            count: payouts[status].count,
+            amount: amount(payouts[status].amountBsCents, 'BS'),
+          },
+        ]),
+      ) as ReconciliationReport['payouts'],
+      breakCount: {
+        HIGH: breaks.filter((b) => b.severity === 'HIGH').length,
+        MEDIUM: breaks.filter((b) => b.severity === 'MEDIUM').length,
+      },
+      breaks,
+    };
+  }
+}
+
+function amount(minorUnits: number, currency: Currency): Amount {
+  return {
+    amount: formatMinorUnits(minorUnits, CURRENCY_DECIMALS[currency], 2),
+    currency,
+  };
 }

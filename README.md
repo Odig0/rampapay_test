@@ -3,8 +3,8 @@
 Take-home for Rampa (brief in [BRIEF.md](BRIEF.md)). Nest.js + TypeScript + SQLite
 (`better-sqlite3`, plain SQL, no ORM).
 
-**Status:** step 1 (ingestion) and step 2 (double-entry ledger and balances)
-are done. The breaks report and pending pay-outs come next.
+**Status:** ingestion, double-entry ledger, balances and breaks report are done.
+A full write-up of the design will replace these per-step notes.
 
 ## How to run
 
@@ -12,8 +12,9 @@ Requires Node.js 22+ and Yarn 1.
 
 ```bash
 yarn install
-yarn ingest   # loads data/ into rampa.db, posts the ledger, prints balances at 20:00
-yarn test     # unit + integration tests (in-memory SQLite)
+yarn reconcile  # ingest data/, post the ledger, print balances and breaks at 20:00,
+                # and write output/reconciliation-report.json
+yarn test       # unit + integration tests (in-memory SQLite)
 ```
 
 Environment variables (optional):
@@ -22,6 +23,7 @@ Environment variables (optional):
 |------------|------------|---------------------------------|
 | `DATA_DIR` | `data`     | Folder with the four input files |
 | `DB_PATH`  | `rampa.db` | SQLite file (`:memory:` works)  |
+| `OUTPUT_DIR` | `output` | Where the JSON report is written |
 
 `rampa.db` is a generated artifact (git-ignored). Delete it to start from scratch.
 
@@ -84,7 +86,7 @@ rows — including in the two review tables.
 First run on an empty database, then a second run on the same files:
 
 ```
-$ yarn ingest
+$ yarn reconcile   # ingestion part of the output
 ┌─────────┬────────────────────┬──────┬──────────┬────────────┬───────────┬─────────┐
 │ (index) │ source             │ read │ inserted │ duplicates │ conflicts │ invalid │
 ├─────────┼────────────────────┼──────┼──────────┼────────────┼───────────┼─────────┤
@@ -94,7 +96,7 @@ $ yarn ingest
 │ 3       │ 'reference_rates'  │ 14   │ 14       │ 0          │ 0         │ 0       │
 └─────────┴────────────────────┴──────┴──────────┴────────────┴───────────┴─────────┘
 
-$ yarn ingest
+$ yarn reconcile   # ingestion part of the output
 ┌─────────┬────────────────────┬──────┬──────────┬────────────┬───────────┬─────────┐
 │ (index) │ source             │ read │ inserted │ duplicates │ conflicts │ invalid │
 ├─────────┼────────────────────┼──────┼──────────┼────────────┼───────────┼─────────┤
@@ -157,7 +159,7 @@ Balances are debits − credits, so source accounts (`usdt:partner_funding`,
 ```
 Ledger: 24 entries posted, 0 already posted
 
-Balances as of 2026-10-05T20:00:00-04:00 (2026-10-06T00:00:00Z)
+Ledger accounts as of 2026-10-05T20:00:00-04:00
   usdt:conversion               14500.00 USDT
   usdt:partner_funding         -16000.00 USDT
   usdt:pending_conversion        1500.00 USDT
@@ -167,3 +169,80 @@ Balances as of 2026-10-05T20:00:00-04:00 (2026-10-06T00:00:00Z)
 ```
 
 A second run prints `0 entries posted, 24 already posted` and the same balances.
+
+## Balances and breaks report (step 3)
+
+Computed on every run from the raw tables and the ledger, as of 20:00 Bolivia
+time; nothing is stored, so the same data always gives the same report (the
+JSON has no generation timestamp and is byte-for-byte reproducible).
+
+- **USDT sent, not yet converted:** balance of `usdt:pending_conversion`.
+- **Bs available at the provider:** balance of `bs:provider_available`.
+- **Bs paid out:** balance of `bs:paid_out`.
+- **Bs in pay-outs not yet final:** pay-outs with CONFIRM and no COMPLETED or
+  FAILED at the cut-off. Not from the ledger: the provider reserves nothing.
+
+Each check is a pure function `(snapshot) => Break[]` listed in
+[src/report/checks/index.ts](src/report/checks/index.ts). Thresholds
+(10 min, 15 min, 0.5 %) are named constants in
+[src/report/breaks.ts](src/report/breaks.ts).
+
+| Code | Severity | Meaning |
+|---|---|---|
+| `DEPOSIT_NOT_CONVERTED` | HIGH | Deposit with no funding webhook after 10 min |
+| `FUNDING_LATE` | MEDIUM | Webhook more than 10 min after its deposit |
+| `RATE_OUT_OF_RANGE` | HIGH | Rate more than 0.5 % below the reference in effect at the webhook |
+| `RATE_MISSING_REFERENCE` | MEDIUM | No reference rate at or before the webhook |
+| `NEGATIVE_BALANCE` | HIGH | Interval with `bs:provider_available` below zero |
+| `PAYOUT_STUCK` | MEDIUM | CONFIRM with no final state after 15 min |
+| `PAYOUT_REVERSED` | MEDIUM | Reversal; needs human review |
+| `INGEST_CONFLICT` / `INGEST_REJECTED` | HIGH / MEDIUM | Rows in the ingestion review tables |
+| `FUNDING_UNKNOWN_DEPOSIT` / `FUNDING_USDT_MISMATCH` | HIGH | Webhook does not match an on-chain deposit |
+| `FUNDING_BS_MISMATCH` | HIGH | `amount_bs` ≠ `amount_usdt × rate` (BigInt, half-cent tolerance) |
+| `FUNDING_DUPLICATE` | HIGH | More than one webhook for the same deposit |
+| `PAYOUT_INVALID_TRANSITION` | HIGH / MEDIUM | COMPLETED/FAILED without CONFIRM, REVERSED without COMPLETED, COMPLETED and FAILED |
+| `PAYOUT_AMOUNT_MISMATCH` | HIGH | Events of one pay-out with different amounts |
+| `PAYOUT_DUPLICATE_EVENT` | MEDIUM | Second COMPLETED/REVERSED with another event_id (not posted) |
+| `PAYOUT_SLOW` | MEDIUM | Final state more than 15 min after CONFIRM |
+
+Not breaks: an expired PREVIEW, a FAILED pay-out, an identical duplicate.
+Assumption: a PREVIEW without CONFIRM at the cut-off counts as expired (the
+brief gives no expiry time).
+
+### Run output
+
+Full JSON: [output/reconciliation-report.json](output/reconciliation-report.json).
+
+```
+Balances as of 2026-10-05T20:00:00-04:00
+  USDT sent, not yet converted        1500.00 USDT
+  Bs available at the provider       12120.95 BS
+  Bs paid out                       129505.55 BS
+  Bs in pay-outs not yet final        3900.00 BS
+
+Pay-outs by status
+  COMPLETED   13     129505.55 BS
+  REVERSED     1       3100.00 BS
+  FAILED       2       9100.00 BS
+  EXPIRED      1       2750.25 BS
+  PENDING      1       3900.00 BS
+
+Breaks: 6 (3 high, 3 medium)
+  [HIGH] 12:36 RATE_OUT_OF_RANGE fw_003
+      rate 9.7168 is 1.20% below the reference 9.8348 of 12:00 (max spread 0.50%)
+  [HIGH] 16:26 NEGATIVE_BALANCE payout:P014:COMPLETED
+      bs:provider_available was negative from 16:26 to 17:10, minimum -2480.55 Bs, caused by payout:P014:COMPLETED
+  [HIGH] 17:40 DEPOSIT_NOT_CONVERTED 0x12a750139ca2e4c14287bb6ed9ece9ee75b556a911f19f91c2f0d59ef40e7597
+      1500.00 USDT deposited at 17:40 has no funding webhook after 140 min (limit 10 min)
+  [MEDIUM] 17:10 FUNDING_LATE fw_004
+      funding webhook at 17:10 arrived 145 min after its deposit at 14:45 (limit 10 min)
+  [MEDIUM] 18:30 PAYOUT_REVERSED P005
+      3100.00 Bs completed at 11:06 and reversed at 18:30; needs human review
+  [MEDIUM] 19:11 PAYOUT_STUCK P018
+      3900.00 Bs confirmed at 19:11 has no final state after 49 min (limit 15 min)
+```
+
+### Next steps
+
+- A webhook timestamped before its deposit is not flagged yet.
+- The report time is a constant; it should be a CLI argument.

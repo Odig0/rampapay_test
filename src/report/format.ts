@@ -27,12 +27,16 @@ export function formatBps(bps: number): string {
   return `${formatMinorUnits(bps, 2, 2)}%`;
 }
 
+// "2026-10-06T00:00:00Z" -> "2026-10-05T20:00:00-04:00".
+export function boliviaTimestamp(utc: string): string {
+  const shifted = new Date(Date.parse(utc) + BOLIVIA_OFFSET_MS);
+  return shifted.toISOString().slice(0, 19) + '-04:00';
+}
+
 // "2026-10-05T20:26:00Z" -> "16:26" (Bolivia time). The data covers one day,
 // so the time of day is enough in messages.
 export function boliviaTime(utc: string): string {
-  return new Date(Date.parse(utc) + BOLIVIA_OFFSET_MS)
-    .toISOString()
-    .slice(11, 16);
+  return boliviaTimestamp(utc).slice(11, 16);
 }
 
 export function minutesBetween(fromUtc: string, toUtc: string): number {

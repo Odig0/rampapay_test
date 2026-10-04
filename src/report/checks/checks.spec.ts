@@ -1,10 +1,4 @@
-import { FundingWebhookRecord } from '../../ingestion/dto/funding-webhook.dto';
-import {
-  PayoutEventRecord,
-  PayoutEventType,
-} from '../../ingestion/dto/payout-event.dto';
 import { sortBreaks } from '../breaks';
-import { ReconciliationSnapshot } from '../snapshot';
 import { checkNegativeProviderBalance } from './balance.checks';
 import {
   checkConversionRates,
@@ -14,65 +8,7 @@ import {
 import { checkIngestConflicts, checkIngestRejections } from './ingest.checks';
 import { checkReversedPayouts, checkStuckPayouts } from './payout.checks';
 import { runChecks } from '.';
-
-// 20:00 Bolivia time.
-const AS_OF = '2026-10-06T00:00:00Z';
-
-function snapshot(
-  overrides: Partial<ReconciliationSnapshot> = {},
-): ReconciliationSnapshot {
-  return {
-    asOf: AS_OF,
-    deposits: [],
-    webhooks: [],
-    payoutEvents: [],
-    rates: [],
-    providerBalanceMovements: [],
-    conflicts: [],
-    rejections: [],
-    ...overrides,
-  };
-}
-
-// Bolivia time "HH:MM" -> UTC timestamp on 5 October 2026.
-function utc(boliviaTime: string): string {
-  const [hours, minutes] = boliviaTime.split(':').map(Number);
-  return (
-    new Date(Date.UTC(2026, 9, 5, hours + 4, minutes))
-      .toISOString()
-      .slice(0, 19) + 'Z'
-  );
-}
-
-function webhook(
-  overrides: Partial<FundingWebhookRecord>,
-): FundingWebhookRecord {
-  return {
-    event_id: 'fw_x',
-    deposit_tx_hash: '0xdep',
-    amount_usdt_micro: 2_500_000_000,
-    rate_micro: 9_760_600,
-    amount_bs_cents: 2_440_150,
-    ts_utc: utc('17:10'),
-    ...overrides,
-  };
-}
-
-function payoutEvent(
-  eventId: string,
-  payoutId: string,
-  type: PayoutEventType,
-  time: string,
-  amount: number,
-): PayoutEventRecord {
-  return {
-    event_id: eventId,
-    payout_id: payoutId,
-    type,
-    amount_bs_cents: amount,
-    ts_utc: utc(time),
-  };
-}
+import { payoutEvent, snapshot, utc, webhook } from './test-helpers';
 
 describe('checkUnconvertedDeposits', () => {
   it('flags a deposit with no webhook after more than 10 minutes', () => {

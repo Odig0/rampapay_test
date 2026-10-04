@@ -114,6 +114,26 @@ describe('ReportService', () => {
       ]);
     });
 
+    it('builds the full report with decimal strings and break counts', () => {
+      const built = report.buildReport(REPORT_AS_OF);
+
+      expect(built).toMatchObject({
+        asOf: '2026-10-05T20:00:00-04:00',
+        asOfUtc: '2026-10-06T00:00:00Z',
+        balances: {
+          usdtNotConverted: { amount: '1500.00', currency: 'USDT' },
+          bsAvailableAtProvider: { amount: '12120.95', currency: 'BS' },
+          bsPaidOut: { amount: '129505.55', currency: 'BS' },
+          bsInPendingPayouts: { amount: '3900.00', currency: 'BS' },
+        },
+        payouts: {
+          PENDING: { count: 1, amount: { amount: '3900.00', currency: 'BS' } },
+        },
+        breakCount: { HIGH: 3, MEDIUM: 3 },
+      });
+      expect(built.breaks).toHaveLength(6);
+    });
+
     it('gives the same report when everything is ingested and posted again', () => {
       const before = report.getBreaks(REPORT_AS_OF);
 
