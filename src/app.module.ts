@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
+import { IngestionModule } from './ingestion/ingestion.module';
 
 @Module({
-  imports: [],
+  imports: [IngestionModule],
 })
 export class AppModule {}
