@@ -13,10 +13,10 @@ export class ReferenceRateDto {
 }
 
 // Columns of the reference_rates table (except raw).
-export interface ReferenceRateRecord {
+export type ReferenceRateRecord = {
   ts_utc: string;
   usdt_bs_micro: number;
-}
+};
 
 export function toReferenceRateRecord(
   dto: ReferenceRateDto,

@@ -43,13 +43,13 @@ export class PayoutEventDto {
 }
 
 // Columns of the payout_events table (except raw).
-export interface PayoutEventRecord {
+export type PayoutEventRecord = {
   event_id: string;
   payout_id: string;
   type: PayoutEventType;
   amount_bs_cents: number;
   ts_utc: string;
-}
+};
 
 export function toPayoutEventRecord(dto: PayoutEventDto): PayoutEventRecord {
   return {

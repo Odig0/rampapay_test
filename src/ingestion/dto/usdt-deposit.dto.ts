@@ -17,11 +17,11 @@ export class UsdtDepositDto {
 }
 
 // Columns of the usdt_deposits table (except raw).
-export interface UsdtDepositRecord {
+export type UsdtDepositRecord = {
   tx_hash: string;
   amount_usdt_micro: number;
   ts_utc: string;
-}
+};
 
 export function toUsdtDepositRecord(dto: UsdtDepositDto): UsdtDepositRecord {
   return {

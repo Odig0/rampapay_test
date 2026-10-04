@@ -41,14 +41,14 @@ export class FundingWebhookDto {
 }
 
 // Columns of the funding_webhooks table (except raw).
-export interface FundingWebhookRecord {
+export type FundingWebhookRecord = {
   event_id: string;
   deposit_tx_hash: string;
   amount_usdt_micro: number;
   rate_micro: number;
   amount_bs_cents: number;
   ts_utc: string;
-}
+};
 
 export function toFundingWebhookRecord(
   dto: FundingWebhookDto,
