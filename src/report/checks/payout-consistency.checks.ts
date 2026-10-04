@@ -1,4 +1,4 @@
-import { PayoutEventType } from '../../ingestion/dto/payout-event.dto';
+import { PayoutEventType } from '../../database/rows';
 import { Break, MAX_PAYOUT_FINALIZATION_MINUTES, Severity } from '../breaks';
 import {
   boliviaTime,

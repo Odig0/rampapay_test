@@ -1,4 +1,4 @@
-import { FundingWebhookRecord } from '../../ingestion/dto/funding-webhook.dto';
+import { FundingWebhookRecord } from '../../database/rows';
 import { Break } from '../breaks';
 import { formatBs, formatRate, formatUsdt } from '../format';
 import { ReconciliationSnapshot } from '../snapshot';

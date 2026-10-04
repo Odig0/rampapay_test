@@ -1,11 +1,13 @@
 import { Inject, Injectable } from '@nestjs/common';
 import Database from 'better-sqlite3';
 import { DATABASE } from '../database/database';
-import { FundingWebhookRecord } from '../ingestion/dto/funding-webhook.dto';
-import { PayoutEventRecord } from '../ingestion/dto/payout-event.dto';
-import { ReferenceRateRecord } from '../ingestion/dto/reference-rate.dto';
-import { UsdtDepositRecord } from '../ingestion/dto/usdt-deposit.dto';
-import { formatMinorUnits } from '../ingestion/money';
+import {
+  FundingWebhookRecord,
+  PayoutEventRecord,
+  ReferenceRateRecord,
+  UsdtDepositRecord,
+} from '../database/rows';
+import { formatMinorUnits } from '../common/money';
 import {
   ACCOUNTS,
   Account,

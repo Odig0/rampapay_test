@@ -1,4 +1,4 @@
-import { ReferenceRateRecord } from '../../ingestion/dto/reference-rate.dto';
+import { ReferenceRateRecord } from '../../database/rows';
 import { Break, MAX_FUNDING_DELAY_MINUTES, MAX_SPREAD_BPS } from '../breaks';
 import {
   boliviaTime,

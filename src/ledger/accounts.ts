@@ -1,4 +1,4 @@
-import { BS_DECIMALS, USDT_DECIMALS } from '../ingestion/money';
+import { BS_DECIMALS, USDT_DECIMALS } from '../common/money';
 
 export type Currency = 'USDT' | 'BS';
 

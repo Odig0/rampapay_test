@@ -1,10 +1,10 @@
 // Builders for check tests. Not used by production code.
-import { FundingWebhookRecord } from '../../ingestion/dto/funding-webhook.dto';
 import {
+  FundingWebhookRecord,
   PayoutEventRecord,
   PayoutEventType,
-} from '../../ingestion/dto/payout-event.dto';
-import { UsdtDepositRecord } from '../../ingestion/dto/usdt-deposit.dto';
+  UsdtDepositRecord,
+} from '../../database/rows';
 import { ReconciliationSnapshot } from '../snapshot';
 
 // 20:00 Bolivia time.

@@ -1,7 +1,9 @@
-import { FundingWebhookRecord } from '../ingestion/dto/funding-webhook.dto';
-import { PayoutEventRecord } from '../ingestion/dto/payout-event.dto';
-import { ReferenceRateRecord } from '../ingestion/dto/reference-rate.dto';
-import { UsdtDepositRecord } from '../ingestion/dto/usdt-deposit.dto';
+import {
+  FundingWebhookRecord,
+  PayoutEventRecord,
+  ReferenceRateRecord,
+  UsdtDepositRecord,
+} from '../database/rows';
 import { AccountMovement } from '../ledger/ledger.service';
 
 export interface IngestConflict {

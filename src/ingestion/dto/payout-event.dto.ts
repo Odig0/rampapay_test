@@ -6,18 +6,10 @@ import {
   IsPositive,
   IsString,
 } from 'class-validator';
-import { BS_DECIMALS, toMinorUnits } from '../money';
-import { toUtc } from '../timestamps';
-
-// Keep in sync with the CHECK constraint on payout_events.type in schema.ts.
-export const PAYOUT_EVENT_TYPES = [
-  'PREVIEW',
-  'CONFIRM',
-  'COMPLETED',
-  'FAILED',
-  'REVERSED',
-] as const;
-export type PayoutEventType = (typeof PAYOUT_EVENT_TYPES)[number];
+import { PAYOUT_EVENT_TYPES } from '../../database/rows';
+import type { PayoutEventRecord, PayoutEventType } from '../../database/rows';
+import { BS_DECIMALS, toMinorUnits } from '../../common/money';
+import { toUtc } from '../../common/timestamps';
 
 // One element of payout_events.json. Amounts arrive as JSON numbers.
 // Only the shape is validated here; the PREVIEW -> CONFIRM -> ... state
@@ -41,15 +33,6 @@ export class PayoutEventDto {
   @IsISO8601({ strict: true })
   timestamp: string;
 }
-
-// Columns of the payout_events table (except raw).
-export type PayoutEventRecord = {
-  event_id: string;
-  payout_id: string;
-  type: PayoutEventType;
-  amount_bs_cents: number;
-  ts_utc: string;
-};
 
 export function toPayoutEventRecord(dto: PayoutEventDto): PayoutEventRecord {
   return {

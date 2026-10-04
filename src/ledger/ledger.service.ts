@@ -1,8 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import Database from 'better-sqlite3';
 import { DATABASE } from '../database/database';
-import { FundingWebhookRecord } from '../ingestion/dto/funding-webhook.dto';
-import { UsdtDepositRecord } from '../ingestion/dto/usdt-deposit.dto';
+import { FundingWebhookRecord, UsdtDepositRecord } from '../database/rows';
 import { Currency } from './accounts';
 import {
   LedgerEntry,

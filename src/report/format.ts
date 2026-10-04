@@ -3,7 +3,7 @@ import {
   RATE_DECIMALS,
   USDT_DECIMALS,
   formatMinorUnits,
-} from '../ingestion/money';
+} from '../common/money';
 
 // Helpers to write break messages with concrete, readable numbers.
 

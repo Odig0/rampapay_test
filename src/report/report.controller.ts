@@ -1,5 +1,5 @@
 import { Controller, Get, Query, ValidationPipe } from '@nestjs/common';
-import { toUtc } from '../ingestion/timestamps';
+import { toUtc } from '../common/timestamps';
 import { DEFAULT_REPORT_AS_OF } from './report-as-of';
 import { ReportQueryDto } from './report-query.dto';
 import type { ReconciliationReport } from './report.service';

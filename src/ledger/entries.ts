@@ -1,6 +1,8 @@
-import { FundingWebhookRecord } from '../ingestion/dto/funding-webhook.dto';
-import { PayoutEventRecord } from '../ingestion/dto/payout-event.dto';
-import { UsdtDepositRecord } from '../ingestion/dto/usdt-deposit.dto';
+import {
+  FundingWebhookRecord,
+  PayoutEventRecord,
+  UsdtDepositRecord,
+} from '../database/rows';
 import { ACCOUNTS, Account, Currency } from './accounts';
 
 export type EntryType =

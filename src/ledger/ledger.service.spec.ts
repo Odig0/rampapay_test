@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { DATABASE, openDatabase } from '../database/database';
 import { IngestionService } from '../ingestion/ingestion.service';
 import { PAYOUT_EVENTS, SOURCES, USDT_DEPOSITS } from '../ingestion/sources';
-import { toUtc } from '../ingestion/timestamps';
+import { toUtc } from '../common/timestamps';
 import { LedgerService } from './ledger.service';
 
 const DATA_DIR = join(__dirname, '..', '..', 'data');

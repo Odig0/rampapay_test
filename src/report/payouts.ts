@@ -1,7 +1,4 @@
-import {
-  PayoutEventRecord,
-  PayoutEventType,
-} from '../ingestion/dto/payout-event.dto';
+import { PayoutEventRecord, PayoutEventType } from '../database/rows';
 
 // Where a pay-out stands at the cut-off:
 //   COMPLETED  money left the provider balance

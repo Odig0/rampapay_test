@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { DATABASE, openDatabase } from '../database/database';
 import { IngestionService } from '../ingestion/ingestion.service';
 import { PAYOUT_EVENTS } from '../ingestion/sources';
-import { toUtc } from '../ingestion/timestamps';
+import { toUtc } from '../common/timestamps';
 import { LedgerService } from '../ledger/ledger.service';
 import { ReportService } from './report.service';
 

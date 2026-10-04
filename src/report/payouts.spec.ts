@@ -1,7 +1,4 @@
-import {
-  PayoutEventRecord,
-  PayoutEventType,
-} from '../ingestion/dto/payout-event.dto';
+import { PayoutEventRecord, PayoutEventType } from '../database/rows';
 import { derivePayouts } from './payouts';
 
 let nextId = 0;

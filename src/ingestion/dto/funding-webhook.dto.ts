@@ -5,13 +5,14 @@ import {
   IsPositive,
   IsString,
 } from 'class-validator';
+import { FundingWebhookRecord } from '../../database/rows';
 import {
   BS_DECIMALS,
   RATE_DECIMALS,
   USDT_DECIMALS,
   toMinorUnits,
-} from '../money';
-import { toUtc } from '../timestamps';
+} from '../../common/money';
+import { toUtc } from '../../common/timestamps';
 
 // One element of funding_webhooks.json. Amounts arrive as JSON numbers, which
 // is also the shape a future webhook endpoint would receive (ValidationPipe).
@@ -39,16 +40,6 @@ export class FundingWebhookDto {
   @IsISO8601({ strict: true })
   timestamp: string;
 }
-
-// Columns of the funding_webhooks table (except raw).
-export type FundingWebhookRecord = {
-  event_id: string;
-  deposit_tx_hash: string;
-  amount_usdt_micro: number;
-  rate_micro: number;
-  amount_bs_cents: number;
-  ts_utc: string;
-};
 
 export function toFundingWebhookRecord(
   dto: FundingWebhookDto,
