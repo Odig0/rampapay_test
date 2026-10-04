@@ -60,6 +60,68 @@ describe('ReportService', () => {
         PENDING: { count: 1, amountBsCents: 390_000 }, // P018
       });
     });
+
+    it('reports exactly the six expected breaks, in a stable order', () => {
+      expect(report.getBreaks(REPORT_AS_OF)).toEqual([
+        {
+          code: 'RATE_OUT_OF_RANGE',
+          severity: 'HIGH',
+          ref: 'fw_003',
+          at: '2026-10-05T16:36:00Z',
+          message:
+            'rate 9.7168 is 1.20% below the reference 9.8348 of 12:00 (max spread 0.50%)',
+        },
+        {
+          code: 'NEGATIVE_BALANCE',
+          severity: 'HIGH',
+          ref: 'payout:P014:COMPLETED',
+          at: '2026-10-05T20:26:00Z',
+          message:
+            'bs:provider_available was negative from 16:26 to 17:10, minimum -2480.55 Bs, caused by payout:P014:COMPLETED',
+        },
+        {
+          code: 'DEPOSIT_NOT_CONVERTED',
+          severity: 'HIGH',
+          ref: '0x12a750139ca2e4c14287bb6ed9ece9ee75b556a911f19f91c2f0d59ef40e7597',
+          at: '2026-10-05T21:40:00Z',
+          message:
+            '1500.00 USDT deposited at 17:40 has no funding webhook after 140 min (limit 10 min)',
+        },
+        {
+          code: 'FUNDING_LATE',
+          severity: 'MEDIUM',
+          ref: 'fw_004',
+          at: '2026-10-05T21:10:00Z',
+          message:
+            'funding webhook at 17:10 arrived 145 min after its deposit at 14:45 (limit 10 min)',
+        },
+        {
+          code: 'PAYOUT_REVERSED',
+          severity: 'MEDIUM',
+          ref: 'P005',
+          at: '2026-10-05T22:30:00Z',
+          message:
+            '3100.00 Bs completed at 11:06 and reversed at 18:30; needs human review',
+        },
+        {
+          code: 'PAYOUT_STUCK',
+          severity: 'MEDIUM',
+          ref: 'P018',
+          at: '2026-10-05T23:11:00Z',
+          message:
+            '3900.00 Bs confirmed at 19:11 has no final state after 49 min (limit 15 min)',
+        },
+      ]);
+    });
+
+    it('gives the same report when everything is ingested and posted again', () => {
+      const before = report.getBreaks(REPORT_AS_OF);
+
+      ingestion.ingestAll(DATA_DIR);
+      ledger.postAll();
+
+      expect(report.getBreaks(REPORT_AS_OF)).toEqual(before);
+    });
   });
 
   it('ignores events after the cut-off: a pay-out completed at 20:05 is still pending at 20:00', () => {

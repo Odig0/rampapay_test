@@ -26,6 +26,13 @@ export interface AccountBalance {
   balance_minor: number; // debits - credits, in micro-USDT or Bs cents
 }
 
+// Net effect of one entry on one account.
+export interface AccountMovement {
+  entry_key: string;
+  effective_at: string;
+  amount_minor: number; // debits - credits; negative lowers the balance
+}
+
 // Events are read in time order (ties broken by id) so that, within a run,
 // the earliest event wins when two events share an entry_key, regardless of
 // the order in which they were ingested.
@@ -73,6 +80,20 @@ const SELECT_BALANCES_SQL = `
   GROUP BY a.code, a.currency
   ORDER BY a.currency DESC, a.code`;
 
+// One row per entry that touches the account, in time order. Ties are broken
+// by entry_key (not by id) so the order does not depend on posting order.
+const SELECT_MOVEMENTS_SQL = `
+  SELECT
+    e.entry_key,
+    e.effective_at,
+    SUM(CASE l.direction WHEN 'DEBIT' THEN l.amount_minor ELSE -l.amount_minor END)
+      AS amount_minor
+  FROM ledger_lines l
+  JOIN ledger_entries e ON e.id = l.entry_id
+  WHERE l.account = @account AND e.effective_at <= @as_of
+  GROUP BY e.id
+  ORDER BY e.effective_at, e.entry_key`;
+
 // Builds the double-entry ledger from the ingested raw tables. Append-only and
 // idempotent: each event maps to one entry_key, and posting again is a no-op.
 // Each event is posted on its own, so the order of arrival does not matter;
@@ -104,6 +125,12 @@ export class LedgerService {
     return this.db
       .prepare(SELECT_BALANCES_SQL)
       .all({ as_of: asOf }) as AccountBalance[];
+  }
+
+  getMovements(account: string, asOf: string): AccountMovement[] {
+    return this.db
+      .prepare(SELECT_MOVEMENTS_SQL)
+      .all({ account, as_of: asOf }) as AccountMovement[];
   }
 
   private buildEntries(): LedgerEntry[] {

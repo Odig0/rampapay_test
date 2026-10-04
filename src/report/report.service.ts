@@ -7,8 +7,14 @@ import { ReferenceRateRecord } from '../ingestion/dto/reference-rate.dto';
 import { UsdtDepositRecord } from '../ingestion/dto/usdt-deposit.dto';
 import { ACCOUNTS, Account } from '../ledger/accounts';
 import { LedgerService } from '../ledger/ledger.service';
+import { Break } from './breaks';
+import { runChecks } from './checks';
 import { PAYOUT_STATUSES, PayoutStatus, derivePayouts } from './payouts';
-import { ReconciliationSnapshot } from './snapshot';
+import {
+  IngestConflict,
+  IngestRejection,
+  ReconciliationSnapshot,
+} from './snapshot';
 
 // The four balances from the brief. USDT in micro-USDT, Bs in cents.
 export interface ReportBalances {
@@ -49,6 +55,16 @@ const SELECT_RATES_SQL = `
   WHERE ts_utc <= @as_of
   ORDER BY ts_utc`;
 
+const SELECT_CONFLICTS_SQL = `
+  SELECT source, natural_key, existing_raw, incoming_raw
+  FROM ingest_conflicts
+  ORDER BY source, natural_key, incoming_raw`;
+
+const SELECT_REJECTIONS_SQL = `
+  SELECT source, row_number, reason, raw
+  FROM ingest_rejections
+  ORDER BY source, row_number, raw`;
+
 // Builds the report from the raw tables and the ledger on every call. Nothing
 // is stored, so running it again always gives the same result.
 @Injectable()
@@ -74,7 +90,21 @@ export class ReportService {
       rates: this.db
         .prepare(SELECT_RATES_SQL)
         .all(params) as ReferenceRateRecord[],
+      providerBalanceMovements: this.ledger.getMovements(
+        ACCOUNTS.providerAvailable.code,
+        asOf,
+      ),
+      conflicts: this.db
+        .prepare(SELECT_CONFLICTS_SQL)
+        .all() as IngestConflict[],
+      rejections: this.db
+        .prepare(SELECT_REJECTIONS_SQL)
+        .all() as IngestRejection[],
     };
+  }
+
+  getBreaks(asOf: string): Break[] {
+    return runChecks(this.loadSnapshot(asOf));
   }
 
   getBalances(asOf: string): ReportBalances {
