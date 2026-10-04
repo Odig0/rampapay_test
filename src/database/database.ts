@@ -8,6 +8,9 @@ export const DATABASE = 'DATABASE';
 // Use ':memory:' as filename for a throwaway database in tests.
 export function openDatabase(filename: string): Database.Database {
   const db = new Database(filename);
+  // SQLite ignores FOREIGN KEY clauses unless this is enabled, and the
+  // setting is per connection, so it must run every time we open one.
+  db.pragma('foreign_keys = ON');
   db.exec(SCHEMA_SQL);
   return db;
 }
