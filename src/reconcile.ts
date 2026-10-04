@@ -8,10 +8,9 @@ import { toUtc } from './ingestion/timestamps';
 import { CURRENCY_DECIMALS } from './ledger/accounts';
 import { LedgerService } from './ledger/ledger.service';
 import { boliviaTime } from './report/format';
+import { DEFAULT_REPORT_AS_OF } from './report/report-as-of';
 import { ReconciliationReport, ReportService } from './report/report.service';
 
-// Report time from the brief: 20:00 Bolivia time (UTC-4).
-const REPORT_AS_OF = '2026-10-05T20:00:00-04:00';
 const REPORT_FILE = 'reconciliation-report.json';
 
 // Command-line entry point: `yarn reconcile`.
@@ -26,7 +25,7 @@ async function main() {
   try {
     const dataDir = process.env.DATA_DIR ?? 'data';
     const outputDir = process.env.OUTPUT_DIR ?? 'output';
-    const asOf = toUtc(REPORT_AS_OF);
+    const asOf = toUtc(DEFAULT_REPORT_AS_OF);
 
     console.log('Ingestion');
     console.table(app.get(IngestionService).ingestAll(dataDir));
@@ -36,7 +35,7 @@ async function main() {
     console.log(
       `\nLedger: ${posting.posted} entries posted, ${posting.skipped} already posted`,
     );
-    console.log(`\nLedger accounts as of ${REPORT_AS_OF}`);
+    console.log(`\nLedger accounts as of ${DEFAULT_REPORT_AS_OF}`);
     for (const b of ledger.getBalances(asOf)) {
       const value = formatMinorUnits(
         b.balance_minor,
