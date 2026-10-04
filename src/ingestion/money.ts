@@ -33,3 +33,20 @@ export function toMinorUnits(value: string | number, decimals: number): number {
   }
   return minorUnits;
 }
+
+// Formats an integer amount in its smallest unit for display, e.g.
+//   formatMinorUnits(1_500_000_000, 6, 2) -> "1500.00"
+// When showing fewer decimals than stored, it rounds half up. Display only:
+// stored values are never rounded.
+export function formatMinorUnits(
+  minorUnits: number,
+  decimals: number,
+  shownDecimals: number,
+): string {
+  const shown = Math.round(
+    Math.abs(minorUnits) / 10 ** (decimals - shownDecimals),
+  );
+  const sign = minorUnits < 0 && shown > 0 ? '-' : '';
+  const digits = String(shown).padStart(shownDecimals + 1, '0');
+  return `${sign}${digits.slice(0, -shownDecimals)}.${digits.slice(-shownDecimals)}`;
+}

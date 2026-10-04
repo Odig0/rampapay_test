@@ -3,8 +3,8 @@
 Take-home for Rampa (brief in [BRIEF.md](BRIEF.md)). Nest.js + TypeScript + SQLite
 (`better-sqlite3`, plain SQL, no ORM).
 
-**Status:** step 1 (ingestion) is done. The double-entry ledger, balances and
-breaks report come next.
+**Status:** step 1 (ingestion) and step 2 (double-entry ledger and balances)
+are done. The breaks report and pending pay-outs come next.
 
 ## How to run
 
@@ -12,7 +12,7 @@ Requires Node.js 22+ and Yarn 1.
 
 ```bash
 yarn install
-yarn ingest   # loads data/ into rampa.db and prints a summary per file
+yarn ingest   # loads data/ into rampa.db, posts the ledger, prints balances at 20:00
 yarn test     # unit + integration tests (in-memory SQLite)
 ```
 
@@ -118,3 +118,52 @@ identical content.
   is exact for these magnitudes; production would parse numbers as text.
 - Prepared statements are created per row for readability; they would be
   prepared once per file.
+
+## Ledger (step 2)
+
+### Accounts
+
+Each account holds a single currency (enforced by a foreign key).
+
+| Account                   | Meaning                                        |
+|---------------------------|------------------------------------------------|
+| `usdt:partner_funding`    | Source of the USDT the partner prefunds        |
+| `usdt:pending_conversion` | USDT sent to the provider, not yet converted   |
+| `usdt:conversion`         | USDT that left through conversion              |
+| `bs:conversion`           | Bs that came in through conversion             |
+| `bs:provider_available`   | Bs balance held by the provider                |
+| `bs:paid_out`             | Bs paid out                                    |
+
+### Entries
+
+| Event              | Entry key                     | Debit                                         | Credit                                        |
+|--------------------|-------------------------------|-----------------------------------------------|-----------------------------------------------|
+| On-chain deposit   | `deposit:<tx_hash>`           | `usdt:pending_conversion`                     | `usdt:partner_funding`                        |
+| Funding webhook    | `funding:<event_id>`          | `usdt:conversion` + `bs:provider_available`   | `usdt:pending_conversion` + `bs:conversion`   |
+| Pay-out COMPLETED  | `payout:<payout_id>:COMPLETED`| `bs:paid_out`                                 | `bs:provider_available`                       |
+| Pay-out REVERSED   | `payout:<payout_id>:REVERSED` | `bs:provider_available`                       | `bs:paid_out`                                 |
+
+PREVIEW, CONFIRM and FAILED post nothing: the provider does not reserve balance,
+so no money moves. Debits equal credits per currency in every entry. The ledger
+is append-only (triggers reject UPDATE/DELETE) and idempotent (`entry_key` is
+UNIQUE), and each event is posted on its own, so arrival order does not matter.
+Amounts are posted as reported; anomalies belong to the breaks report.
+
+Balances are debits − credits, so source accounts (`usdt:partner_funding`,
+`bs:conversion`) are negative.
+
+### Run output
+
+```
+Ledger: 24 entries posted, 0 already posted
+
+Balances as of 2026-10-05T20:00:00-04:00 (2026-10-06T00:00:00Z)
+  usdt:conversion               14500.00 USDT
+  usdt:partner_funding         -16000.00 USDT
+  usdt:pending_conversion        1500.00 USDT
+  bs:conversion               -141626.50 BS
+  bs:paid_out                  129505.55 BS
+  bs:provider_available         12120.95 BS
+```
+
+A second run prints `0 entries posted, 24 already posted` and the same balances.

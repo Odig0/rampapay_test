@@ -1,4 +1,12 @@
+import { BS_DECIMALS, USDT_DECIMALS } from '../ingestion/money';
+
 export type Currency = 'USDT' | 'BS';
+
+// Decimals of the smallest unit each currency is stored in.
+export const CURRENCY_DECIMALS: Record<Currency, number> = {
+  USDT: USDT_DECIMALS,
+  BS: BS_DECIMALS,
+};
 
 export interface Account {
   code: string;

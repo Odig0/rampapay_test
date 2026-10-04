@@ -2,6 +2,7 @@ import {
   BS_DECIMALS,
   RATE_DECIMALS,
   USDT_DECIMALS,
+  formatMinorUnits,
   toMinorUnits,
 } from './money';
 
@@ -40,5 +41,21 @@ describe('toMinorUnits', () => {
     expect(() => toMinorUnits('99999999999999', USDT_DECIMALS)).toThrow(
       'too large',
     );
+  });
+});
+
+describe('formatMinorUnits', () => {
+  it('formats amounts with the requested number of decimals', () => {
+    expect(formatMinorUnits(1_500_000_000, USDT_DECIMALS, 2)).toBe('1500.00');
+    expect(formatMinorUnits(1_212_095, BS_DECIMALS, 2)).toBe('12120.95');
+    expect(formatMinorUnits(-14_162_650, BS_DECIMALS, 2)).toBe('-141626.50');
+    expect(formatMinorUnits(5, BS_DECIMALS, 2)).toBe('0.05');
+    expect(formatMinorUnits(0, BS_DECIMALS, 2)).toBe('0.00');
+  });
+
+  it('rounds half up when showing fewer decimals than stored', () => {
+    expect(formatMinorUnits(1_234_999, USDT_DECIMALS, 2)).toBe('1.23');
+    expect(formatMinorUnits(1_235_000, USDT_DECIMALS, 2)).toBe('1.24');
+    expect(formatMinorUnits(-1, USDT_DECIMALS, 2)).toBe('0.00');
   });
 });
