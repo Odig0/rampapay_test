@@ -1,0 +1,3 @@
+# Always use LF line endings in the working tree, regardless of core.autocrlf,
+# so Prettier/ESLint behave the same on Windows and Unix.
+* text=auto eol=lf
