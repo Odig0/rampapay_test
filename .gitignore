@@ -47,6 +47,10 @@ lerna-debug.log*
 .tmp
 
 # Runtime data
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
 pids
 *.pid
 *.seed
